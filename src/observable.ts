@@ -38,14 +38,21 @@ const runSubscriber = (callback: () => void) => {
   subscriber = null;
 };
 
+const hasProp = (obj: any, key: symbol | string): boolean => {
+  if (typeof obj !== "object") {
+    throw Error("Expected object");
+  }
+  return (obj as Object).hasOwnProperty(key);
+};
+
 export function observable(target: any, key: string | symbol): any {
   const innerPropSymbol = Symbol(key.toString());
   return {
     set: function(value: any) {
-      if (this[idSymbol] == null) {
+      if (hasProp(this, idSymbol)) {
         defineInnerKey(this);
       }
-      if (!this[innerPropSymbol]) {
+      if (hasProp(this, innerPropSymbol)) {
         defineInnerPropertyValue(this, innerPropSymbol, value);
       }
       this[innerPropSymbol] = value;

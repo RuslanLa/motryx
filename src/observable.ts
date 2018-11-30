@@ -32,6 +32,12 @@ const defineInnerPropertyValue = (
 const getObserversKey = (obj: any, key: string | symbol) =>
   obj[idSymbol] + key.toString();
 
+const runSubscriber = (callback: () => void) => {
+  subscriber = callback;
+  callback();
+  subscriber = null;
+};
+
 export function observable(target: any, key: string | symbol): any {
   const innerPropSymbol = Symbol(key.toString());
   return {
@@ -52,9 +58,7 @@ export function observable(target: any, key: string | symbol): any {
           subscribersToRun.push(callback);
           return;
         }
-        subscriber = callback;
-        callback();
-        subscriber = null;
+        runSubscriber(callback);
       });
     },
     get: function() {
@@ -102,9 +106,7 @@ export function action(
     var result = originalMethod.apply(this, args);
     isInsideAction = false;
     unique(subscribersToRun).forEach(c => {
-      subscriber = c;
-      c();
-      subscriber = null;
+      runSubscriber(c);
     });
     subscribersToRun = [];
     return result;
@@ -113,7 +115,5 @@ export function action(
 }
 
 export function autoRun(callback: () => void) {
-  subscriber = callback;
-  callback();
-  subscriber = null;
+  runSubscriber(callback);
 }

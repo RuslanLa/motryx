@@ -109,13 +109,16 @@ export function action(
   var originalMethod = descriptor.value;
 
   descriptor.value = function(...args: any[]) {
+    const isNotInitialAction = isInsideAction;
     isInsideAction = true;
     var result = originalMethod.apply(this, args);
-    isInsideAction = false;
-    unique(subscribersToRun).forEach(c => {
-      runSubscriber(c);
-    });
-    subscribersToRun = [];
+    isInsideAction = isNotInitialAction;
+    if (!isNotInitialAction) {
+      unique(subscribersToRun).forEach(c => {
+        runSubscriber(c);
+      });
+      subscribersToRun = [];
+    }
     return result;
   };
   return descriptor;

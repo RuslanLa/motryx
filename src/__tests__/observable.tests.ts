@@ -62,4 +62,12 @@ describe('autorun tests', () => {
         monkey.feed({ calorie: 20, effect: -10 });
         expect(autorunCounter).toBeCalledTimes(1);
     });
+    test('should run with actual value', () => {
+        autoRun(() => {
+            someAction(monkey.fullness);
+        });
+        someAction.mockClear();
+        monkey.fullness = 90;
+        expect(someAction).toBeCalledWith(90);
+    });
 });

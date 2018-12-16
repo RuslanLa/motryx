@@ -48,11 +48,11 @@ const hasProp = (obj: any, key: symbol | string): boolean => {
 export function observable(target: any, key: string | symbol): any {
   const innerPropSymbol = Symbol(key.toString());
   return {
-    set: function(value: any) {
-      if (hasProp(this, idSymbol)) {
+    set: function (value: any) {
+      if (!hasProp(this, idSymbol)) {
         defineInnerKey(this);
       }
-      if (hasProp(this, innerPropSymbol)) {
+      if (!hasProp(this, innerPropSymbol)) {
         defineInnerPropertyValue(this, innerPropSymbol, value);
       }
       this[innerPropSymbol] = value;
@@ -68,7 +68,7 @@ export function observable(target: any, key: string | symbol): any {
         runSubscriber(callback);
       });
     },
-    get: function() {
+    get: function () {
       const val = this[innerPropSymbol];
       if (!subscriber) {
         return val;
@@ -108,7 +108,7 @@ export function action(
   }
   var originalMethod = descriptor.value;
 
-  descriptor.value = function(...args: any[]) {
+  descriptor.value = function (...args: any[]) {
     const isNotInitialAction = isInsideAction;
     isInsideAction = true;
     var result = originalMethod.apply(this, args);

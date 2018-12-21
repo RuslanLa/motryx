@@ -70,4 +70,36 @@ describe('autorun tests', () => {
         monkey.fullness = 90;
         expect(someAction).toBeCalledWith(90);
     });
+    test('should rerun only child', () => {
+        autoRun(() => {
+            someAction();
+            autoRun(() => {
+                autorunCounter(monkey.fullness);
+            })
+        });
+        autorunCounter.mockClear();
+        someAction.mockClear();
+        monkey.feed({ calorie: 20, effect: -10 });
+        expect(autorunCounter).toBeCalledTimes(1);
+        expect(someAction).not.toBeCalled();
+
+    })
+    test('should run child only once', () => {
+        autoRun(() => {
+            const v = Math.random();
+            someAction(monkey.fullness);
+            console.log('parent');
+            autoRun(() => {
+                autorunCounter(monkey.fullness);
+                console.log(v);
+            })
+        });
+        console.log('next');
+        autorunCounter.mockClear();
+        someAction.mockClear();
+        monkey.feed({ calorie: 20, effect: -10 });
+        expect(autorunCounter).toBeCalledTimes(1);
+        expect(someAction).toBeCalledTimes(1);
+
+    })
 });

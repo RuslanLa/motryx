@@ -86,15 +86,11 @@ describe('autorun tests', () => {
     })
     test('should run child only once', () => {
         autoRun(() => {
-            const v = Math.random();
             someAction(monkey.fullness);
-            console.log('parent');
             autoRun(() => {
                 autorunCounter(monkey.fullness);
-                console.log(v);
             })
         });
-        console.log('next');
         autorunCounter.mockClear();
         someAction.mockClear();
         monkey.feed({ calorie: 20, effect: -10 });
@@ -102,4 +98,47 @@ describe('autorun tests', () => {
         expect(someAction).toBeCalledTimes(1);
 
     })
+    test('should run child that subscribes another property', () => {
+        autoRun(() => {
+            someAction(monkey.fullness);
+            autoRun(() => {
+                autorunCounter(monkey.health);
+            })
+        });
+        autorunCounter.mockClear();
+        someAction.mockClear();
+        monkey.feed({ calorie: 20, effect: -10 });
+        expect(autorunCounter).toBeCalledTimes(2);
+        expect(someAction).toBeCalledTimes(1);
+
+    })
+    test('allow to subscribe after child run', () => {
+        autoRun(() => {
+            autoRun(() => {
+                autorunCounter(monkey.health);
+            })
+            someAction(monkey.fullness);
+        });
+        autorunCounter.mockClear();
+        someAction.mockClear();
+        monkey.feed({ calorie: 20, effect: -10 });
+        expect(autorunCounter).toBeCalledTimes(2);
+        expect(someAction).toBeCalledTimes(1);
+
+    })
+    test('should run child only once does not depend on order', () => {
+        autoRun(() => {
+            autoRun(() => {
+                autorunCounter(monkey.fullness);
+            });
+            someAction(monkey.fullness);
+        });
+        autorunCounter.mockClear();
+        someAction.mockClear();
+        monkey.feed({ calorie: 20, effect: -10 });
+        expect(autorunCounter).toBeCalledTimes(1);
+        expect(someAction).toBeCalledTimes(1);
+
+    })
+
 });

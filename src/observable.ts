@@ -4,6 +4,7 @@ let count = 0;
 let isInsideAction = false;
 let subscribersToRun: (() => void)[] = [];
 let subscriber: (() => void) | null = null;
+let alreadySubscribed: Set<string> = new Set();
 
 const idSymbol = Symbol("id");
 
@@ -33,9 +34,13 @@ const getObserversKey = (obj: any, key: string | symbol) =>
   obj[idSymbol] + key.toString();
 
 const runSubscriber = (callback: () => void) => {
+  const initialSubscriber = subscriber;
   subscriber = callback;
   callback();
-  subscriber = null;
+  subscriber = initialSubscriber;
+  if (subscriber === null) {
+    alreadySubscribed = new Set();
+  }
 };
 
 const hasProp = (obj: any, key: symbol | string): boolean => {
@@ -74,6 +79,10 @@ export function observable(target: any, key: string | symbol): any {
         return val;
       }
       const observersKey = getObserversKey(this, key);
+      if (alreadySubscribed.has(observersKey)) {
+        return;
+      }
+      alreadySubscribed.add(observersKey);
       let currentObservers = observers.get(observersKey);
       if (!currentObservers) {
         currentObservers = [];

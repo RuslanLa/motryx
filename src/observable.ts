@@ -1,12 +1,27 @@
-const observers = new Map<string, (() => void)[]>();
+interface ObserverEnvironment {
+  scope: number;
+  depth: number;
+}
+
+interface Observer {
+  callback: (() => void);
+  depth: number;
+}
+
+type ObserversScopesMap = Map<number, Observer>;
+const createObserversMap = () => new Map<number, Observer>();
+
+const observers = new Map<string, ObserversScopesMap>();
 
 let count = 0;
 let isInsideAction = false;
 let subscribersToRun: (() => void)[] = [];
 let subscriber: (() => void) | null = null;
-let alreadySubscribed: Set<string> = new Set();
 
 const idSymbol = Symbol("id");
+let currentScopeId: number | null = null;
+let depth = 0;
+let lastScopeId = 0;
 
 const defineInnerKey = (object: any) => {
   Object.defineProperty(object, idSymbol, {
@@ -34,12 +49,19 @@ const getObserversKey = (obj: any, key: string | symbol) =>
   obj[idSymbol] + key.toString();
 
 const runSubscriber = (callback: () => void) => {
+  const isBeginOfScope = currentScopeId === null;
+  if (isBeginOfScope) {
+    lastScopeId++;
+    currentScopeId = lastScopeId;
+  }
   const initialSubscriber = subscriber;
   subscriber = callback;
+  depth++;
   callback();
+  depth--;
   subscriber = initialSubscriber;
-  if (subscriber === null) {
-    alreadySubscribed = new Set();
+  if (isBeginOfScope) {
+    currentScopeId = null;
   }
 };
 
@@ -65,12 +87,12 @@ export function observable(target: any, key: string | symbol): any {
       if (!propertyObservers) {
         return;
       }
-      propertyObservers!.forEach(callback => {
+      propertyObservers!.forEach(observer => {
         if (isInsideAction) {
-          subscribersToRun.push(callback);
+          subscribersToRun.push(observer.callback);
           return;
         }
-        runSubscriber(callback);
+        runSubscriber(observer.callback);
       });
     },
     get: function () {
@@ -79,19 +101,23 @@ export function observable(target: any, key: string | symbol): any {
         return val;
       }
       const observersKey = getObserversKey(this, key);
-      if (alreadySubscribed.has(observersKey)) {
-        return;
-      }
-      alreadySubscribed.add(observersKey);
       let currentObservers = observers.get(observersKey);
       if (!currentObservers) {
-        currentObservers = [];
+        currentObservers = createObserversMap();
         observers.set(observersKey, currentObservers);
       }
-      if (currentObservers.includes(subscriber)) {
+
+      if ([...currentObservers].some(([scope, o]) => o.callback === subscriber) || currentScopeId == null) {
         return val;
       }
-      currentObservers.push(subscriber);
+      const existingScopedObserver = currentObservers.get(currentScopeId);
+      if (existingScopedObserver != undefined && existingScopedObserver.depth <= depth) {
+        return;
+      }
+      currentObservers.set(currentScopeId, {
+        callback: subscriber,
+        depth
+      });
       return val;
     },
     enumerable: true,

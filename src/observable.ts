@@ -1,8 +1,3 @@
-interface ObserverEnvironment {
-  scope: number;
-  depth: number;
-}
-
 interface Observer {
   callback: (() => void);
   depth: number;
@@ -75,7 +70,7 @@ const hasProp = (obj: any, key: symbol | string): boolean => {
 export function observable(target: any, key: string | symbol): any {
   const innerPropSymbol = Symbol(key.toString());
   return {
-    set: function (value: any) {
+    set: function(value: any) {
       if (!hasProp(this, idSymbol)) {
         defineInnerKey(this);
       }
@@ -95,7 +90,7 @@ export function observable(target: any, key: string | symbol): any {
         runSubscriber(observer.callback);
       });
     },
-    get: function () {
+    get: function() {
       const val = this[innerPropSymbol];
       if (!subscriber) {
         return val;
@@ -107,11 +102,17 @@ export function observable(target: any, key: string | symbol): any {
         observers.set(observersKey, currentObservers);
       }
 
-      if ([...currentObservers].some(([scope, o]) => o.callback === subscriber) || currentScopeId == null) {
+      if (
+        [...currentObservers].some(([scope, o]) => o.callback === subscriber) ||
+        currentScopeId == null
+      ) {
         return val;
       }
       const existingScopedObserver = currentObservers.get(currentScopeId);
-      if (existingScopedObserver != undefined && existingScopedObserver.depth <= depth) {
+      if (
+        existingScopedObserver != undefined &&
+        existingScopedObserver.depth <= depth
+      ) {
         return;
       }
       currentObservers.set(currentScopeId, {
@@ -143,7 +144,7 @@ export function action(
   }
   var originalMethod = descriptor.value;
 
-  descriptor.value = function (...args: any[]) {
+  descriptor.value = function(...args: any[]) {
     const isNotInitialAction = isInsideAction;
     isInsideAction = true;
     var result = originalMethod.apply(this, args);

@@ -27,7 +27,7 @@ describe("observable array tests", () => {
     jungle.addMonkey();
     expect(autorunCounter).not.toBeCalled();
   });
-  test("should not run subscriber of length on push", () => {
+  test("should run subscriber of length on push", () => {
     autoRun(() => {
       autorunCounter(jungle.monkeys.length);
     });

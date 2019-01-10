@@ -97,9 +97,6 @@ export function observable(target: any, key: string | symbol): any {
       if (!subscriber) {
         return val;
       }
-      // if (Array.isArray(val)) {
-      //   val = createObservableArray(val, () => {});
-      // }
       const observersKey = getObserversKey(this, key);
       let currentObservers = observers.get(observersKey);
       if (!currentObservers) {

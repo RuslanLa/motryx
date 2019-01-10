@@ -1,6 +1,28 @@
+const isIndex = (property: number | any): boolean => {
+  return typeof property === "number" || !isNaN(property);
+};
 export const createObservableArray = <T>(
   arr: T[],
-  callback: () => void
+  onChange: () => void,
+  onSubscribe: () => void
 ): T[] => {
-  return arr;
+  return new Proxy(arr, {
+    set: (
+      target: T[],
+      property: string | symbol | number,
+      value: any
+    ): boolean => {
+      if (isIndex(property)) {
+        Reflect.set(target, property, value);
+        onChange();
+      }
+      return true;
+    },
+    get: (target: T[], property: string | symbol | number): any => {
+      if (isIndex(property) || property === Symbol.length) {
+        onSubscribe();
+      }
+      return Reflect.get(target, property);
+    }
+  });
 };

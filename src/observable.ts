@@ -1,3 +1,5 @@
+import { createObservableArray } from "./observable-array";
+
 interface Observer {
   callback: (() => void);
   depth: number;
@@ -91,10 +93,13 @@ export function observable(target: any, key: string | symbol): any {
       });
     },
     get: function() {
-      const val = this[innerPropSymbol];
+      let val = this[innerPropSymbol];
       if (!subscriber) {
         return val;
       }
+      // if (Array.isArray(val)) {
+      //   val = createObservableArray(val, () => {});
+      // }
       const observersKey = getObserversKey(this, key);
       let currentObservers = observers.get(observersKey);
       if (!currentObservers) {
@@ -135,19 +140,20 @@ const unique = <T>(arr: T[]): T[] => {
   }, []);
 };
 export function action(
+  this: any,
   target: any,
   key: string | symbol,
-  descriptor: PropertyDescriptor
+  descriptor?: PropertyDescriptor
 ): any {
-  if (descriptor === undefined) {
-    descriptor = Object.getOwnPropertyDescriptor(target, key)!;
-  }
-  var originalMethod = descriptor.value;
-
-  descriptor.value = function(...args: any[]) {
+  const originalMethod = () =>
+    descriptor == null ? target[key] : descriptor.value;
+  const buildResultMethod = (originalMethodGetter: () => any) => (
+    ...args: any[]
+  ) => {
     const isNotInitialAction = isInsideAction;
     isInsideAction = true;
-    var result = originalMethod.apply(this, args);
+    const original = originalMethodGetter();
+    var result = original.apply(this, args);
     isInsideAction = isNotInitialAction;
     if (!isNotInitialAction) {
       unique(subscribersToRun).forEach(c => {
@@ -157,7 +163,21 @@ export function action(
     }
     return result;
   };
-  return descriptor;
+  let resultMethod = buildResultMethod(originalMethod);
+  if (descriptor != null) {
+    descriptor.value = resultMethod;
+    return descriptor;
+  }
+  return {
+    configurable: true,
+    enumerable: true,
+    get: () => {
+      return resultMethod;
+    },
+    set: (value: any) => {
+      resultMethod = buildResultMethod(() => value);
+    }
+  };
 }
 
 export function autoRun(callback: () => void) {

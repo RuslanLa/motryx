@@ -19,7 +19,7 @@ export const createObservableArray = <T>(
       return true;
     },
     get: (target: T[], property: string | symbol | number): any => {
-      if (isIndex(property) || property === Symbol.length) {
+      if (isIndex(property) || property === "length") {
         onSubscribe();
       }
       return Reflect.get(target, property);

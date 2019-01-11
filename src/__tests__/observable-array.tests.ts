@@ -11,10 +11,12 @@ class Jungle {
 }
 
 let jungle = new Jungle();
+let secondJungle = new Jungle();
 const autorunCounter = jest.fn();
 
 beforeEach(() => {
   jungle = new Jungle();
+  secondJungle = new Jungle();
   autorunCounter.mockClear();
 });
 
@@ -34,5 +36,13 @@ describe("observable array tests", () => {
     autorunCounter.mockClear();
     jungle.addMonkey();
     expect(autorunCounter).toBeCalled();
+  });
+  test("shouldn't run subscriber of another object", () => {
+    autoRun(() => {
+      autorunCounter(jungle.monkeys.length);
+    });
+    autorunCounter.mockClear();
+    secondJungle.addMonkey();
+    expect(autorunCounter).not.toBeCalled();
   });
 });

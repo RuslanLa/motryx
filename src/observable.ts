@@ -69,58 +69,73 @@ const hasProp = (obj: any, key: symbol | string): boolean => {
   return (obj as Object).hasOwnProperty(key);
 };
 
+const onPropertyValueChange = (propertyObserversKey: string): void => {
+  const propertyObservers = observers.get(propertyObserversKey);
+  if (!propertyObservers) {
+    return;
+  }
+  propertyObservers!.forEach(observer => {
+    if (isInsideAction) {
+      subscribersToRun.push(observer.callback);
+      return;
+    }
+    runSubscriber(observer.callback);
+  });
+};
+const onSubscribe = (propertyObserversKey: string): void => {
+  if (!subscriber) {
+    return;
+  }
+  let currentObservers = observers.get(propertyObserversKey);
+  if (!currentObservers) {
+    currentObservers = createObserversMap();
+    observers.set(propertyObserversKey, currentObservers);
+  }
+
+  if (
+    [...currentObservers].some(([scope, o]) => o.callback === subscriber) ||
+    currentScopeId == null
+  ) {
+    return;
+  }
+  const existingScopedObserver = currentObservers.get(currentScopeId);
+  if (
+    existingScopedObserver != undefined &&
+    existingScopedObserver.depth <= depth
+  ) {
+    return;
+  }
+  currentObservers.set(currentScopeId, {
+    callback: subscriber,
+    depth
+  });
+};
 export function observable(target: any, key: string | symbol): any {
   const innerPropSymbol = Symbol(key.toString());
   return {
     set: function(value: any) {
-      if (!hasProp(this, idSymbol)) {
-        defineInnerKey(this);
+      let convertedValue = value;
+      if (!hasProp(target, idSymbol)) {
+        defineInnerKey(target);
       }
-      if (!hasProp(this, innerPropSymbol)) {
-        defineInnerPropertyValue(this, innerPropSymbol, value);
+      if (!hasProp(target, innerPropSymbol)) {
+        defineInnerPropertyValue(target, innerPropSymbol, value);
       }
-      this[innerPropSymbol] = value;
-      const propertyObservers = observers.get(getObserversKey(this, key));
-      if (!propertyObservers) {
-        return;
+      if (Array.isArray(value)) {
+        const fieldKey = getObserversKey(target, key) + "array";
+        convertedValue = createObservableArray(
+          convertedValue,
+          () => onPropertyValueChange(fieldKey),
+          () => onSubscribe(fieldKey)
+        );
       }
-      propertyObservers!.forEach(observer => {
-        if (isInsideAction) {
-          subscribersToRun.push(observer.callback);
-          return;
-        }
-        runSubscriber(observer.callback);
-      });
+      target[innerPropSymbol] = convertedValue;
+      onPropertyValueChange(getObserversKey(target, key));
     },
     get: function() {
-      let val = this[innerPropSymbol];
-      if (!subscriber) {
-        return val;
-      }
-      const observersKey = getObserversKey(this, key);
-      let currentObservers = observers.get(observersKey);
-      if (!currentObservers) {
-        currentObservers = createObserversMap();
-        observers.set(observersKey, currentObservers);
-      }
-
-      if (
-        [...currentObservers].some(([scope, o]) => o.callback === subscriber) ||
-        currentScopeId == null
-      ) {
-        return val;
-      }
-      const existingScopedObserver = currentObservers.get(currentScopeId);
-      if (
-        existingScopedObserver != undefined &&
-        existingScopedObserver.depth <= depth
-      ) {
-        return;
-      }
-      currentObservers.set(currentScopeId, {
-        callback: subscriber,
-        depth
-      });
+      let val = target[innerPropSymbol];
+      const observersKey = getObserversKey(target, key);
+      onSubscribe(observersKey);
       return val;
     },
     enumerable: true,

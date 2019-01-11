@@ -2,12 +2,14 @@ import { Monkey } from "./monkey";
 import { autoRun } from "../observable";
 
 let monkey = new Monkey();
+// let secondMonkey = new Monkey();
 const someAction = jest.fn();
 const autorunCounter = jest.fn();
 beforeEach(() => {
-  monkey = new Monkey();
   someAction.mockClear();
   autorunCounter.mockClear();
+  monkey = new Monkey();
+  // secondMonkey = new Monkey();
 });
 describe("autorun tests", () => {
   test("should run firstly on subscription", () => {
@@ -17,6 +19,7 @@ describe("autorun tests", () => {
     });
     expect(autorunCounter).toBeCalledTimes(1);
   });
+
   test("should run exactly same count as observable fields changed", () => {
     autoRun(() => {
       someAction(monkey.fullness);
@@ -30,6 +33,13 @@ describe("autorun tests", () => {
     monkey.fullness = 10;
     monkey.fullness = 4;
     expect(autorunCounter).toBeCalledTimes(4);
+  });
+  test("shouldn't run on another objects field changes", () => {
+    autoRun(() => {
+      someAction(monkey.fullness);
+    });
+    // secondMonkey.feed({ calorie: 20, effect: -10 });
+    expect(someAction).not.toBeCalled();
   });
   test("should subscribe several fields", () => {
     autoRun(() => {

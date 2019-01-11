@@ -115,26 +115,26 @@ export function observable(target: any, key: string | symbol): any {
   return {
     set: function(value: any) {
       let convertedValue = value;
-      if (!hasProp(target, idSymbol)) {
-        defineInnerKey(target);
+      if (!hasProp(this, idSymbol)) {
+        defineInnerKey(this);
       }
-      if (!hasProp(target, innerPropSymbol)) {
-        defineInnerPropertyValue(target, innerPropSymbol, value);
+      if (!hasProp(this, innerPropSymbol)) {
+        defineInnerPropertyValue(this, innerPropSymbol, value);
       }
       if (Array.isArray(value)) {
-        const fieldKey = getObserversKey(target, key) + "array";
+        const fieldKey = getObserversKey(this, key) + "array";
         convertedValue = createObservableArray(
           convertedValue,
           () => onPropertyValueChange(fieldKey),
           () => onSubscribe(fieldKey)
         );
       }
-      target[innerPropSymbol] = convertedValue;
-      onPropertyValueChange(getObserversKey(target, key));
+      this[innerPropSymbol] = convertedValue;
+      onPropertyValueChange(getObserversKey(this, key));
     },
     get: function() {
-      let val = target[innerPropSymbol];
-      const observersKey = getObserversKey(target, key);
+      let val = this[innerPropSymbol];
+      const observersKey = getObserversKey(this, key);
       onSubscribe(observersKey);
       return val;
     },
